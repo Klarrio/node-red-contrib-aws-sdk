@@ -15,25 +15,38 @@
  **/
 
 module.exports = function(RED) {
-	"use strict";	
+	"use strict";
 	var util = require("util");
 	var vm = require("vm");
-	var AWS = require('aws-sdk');
 
 	function AWSConfigSetup(n) {
 		RED.nodes.createNode(this, n);
 
+		this.AWS = require('aws-sdk');
 		this.connected = false;
 		this.connecting = false;
 		this.usecount = 0;
 		// Config node state
 		this.name = n.name;
-		this.accesskey = n.accesskey;
-		this.secretkey = n.secretkey;
+		this.awsConfig = RED.nodes.getNode(n.aws);
 		this.region = n.region;
-		this.iamrole = n.iamrole;
+
+		//verify whether credentials were entered in the linked aws simple config
+		var configAWS = this.awsConfig ? this.awsConfig.AWS : null;
+    if (!configAWS) {
+        this.warn("Missing AWS credentials");
+        return;
+    }
+
+		//transfer the settings to our own AWS object.
+		this.AWS.config.update({
+			accessKeyId: configAWS.config.credentials.accessKeyId,
+      secretAccessKey: configAWS.config.credentials.secretAccessKey,
+			region : this.region
+		});
 
 		var node = this;
+
 		this.register = function() {
 			node.usecount += 1;
 		};
@@ -43,17 +56,7 @@ module.exports = function(RED) {
 			if (node.usecount == 0) {
 			}
 		};
-		this.init = function() {
-			if (!node.iamrole) {
-				AWS.config.update({
-					accessKeyId : node.accesskey,
-					secretAccessKey : node.secretkey
-				});
-			}
-			AWS.config.update({
-				region : node.region
-			});
-		};
+
 
 		this.on('close', function(closecomplete) {
 			if (this.connected) {
@@ -70,7 +73,7 @@ module.exports = function(RED) {
 	}
 
 
-	RED.nodes.registerType("aws-config", AWSConfigSetup);
+	RED.nodes.registerType("aws-config-extended", AWSConfigSetup);
 
 	function sendResults(node, _msgid, msgs) {
 		if (msgs == null) {
@@ -105,13 +108,13 @@ module.exports = function(RED) {
 		this.config = n.config;
 		this.topic = n.topic;
 		this.timeout = n.timeout;
-		this.AWSConfig = RED.nodes.getNode(this.config);
+		this.config = RED.nodes.getNode(n.config);
 		var functionText = "var results = null;" + "results = (function(msg){ " + "var __msgid__ = msg._msgid;" + "var node = {" + "log:__node__.log," + "error:__node__.error," + "warn:__node__.warn," + "on:__node__.on," + "status:__node__.status," + "send:function(msgs){ __node__.send(__msgid__,msgs);}" + "};\n" + this.func + "\n" + "})(msg);";
 		var sandbox = {
 			callback : function(results) {
 				sendResults(node, node.name, results);
 			},
-			AWS : AWS,
+			AWS : this.config.AWS,
 			console : console,
 			util : util,
 			Buffer : Buffer,
@@ -141,16 +144,13 @@ module.exports = function(RED) {
 			setTimeout : setTimeout,
 			clearTimeout : clearTimeout
 		};
-		if (node.AWSConfig) {
-			node.AWSConfig.init();
-		}
 		var context = vm.createContext(sandbox);
 		try {
 			this.script = vm.createScript(functionText);
 			this.on("input", function(msg) {
 				try {
 					var start = process.hrtime();
-					context.msg = msg;					
+					context.msg = msg;
 					node.script.runInContext(context);
 					sendResults(node, node.name, context.results);
 

@@ -5,7 +5,7 @@ A function block where you can write your own code to execute aws-sdk nodejs lib
 [![npm version](https://badge.fury.io/js/node-red-contrib-aws-sdk.svg)](https://badge.fury.io/js/node-red-contrib-aws-sdk)
 
 **Example of using aws-sdk inside this function block:**
-	
+
 ```javascript
 // Create a bucket using bound parameters and put something in it.
 // Make sure to change the bucket name from "myBucket" to something unique.
