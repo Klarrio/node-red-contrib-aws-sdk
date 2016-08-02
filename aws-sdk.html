@@ -20,12 +20,12 @@ limitations under the License.
 	</div>
 	<div id="node-config-aws-config-tabs-content" style="min-height: 170px;">
 		<div id="aws-config-tab-connection" style="display:none">
-			<div class="form-row node-input-name">
+			<div class="form-row">
 				<label for="node-config-input-name"><i class="fa fa-globe"></i> <span>Name</span></label>
 					<input class="input-append-left" type="text" id="node-config-input-name" placeholder="Enter a configuration name" style="width: 40%;" >
 			</div>
 			<div class="form-row">
-        <label for="node-input-aws"><i class="fa fa-user"></i> AWS</label>
+        <label for="node-config-input-aws"><i class="fa fa-user"></i> AWS</label>
         <input type="text" id="node-config-input-aws">
       </div>
 			<div class="form-row">
@@ -70,6 +70,7 @@ limitations under the License.
 				value : ""
 			}
 		},
+		exportable: false,
 		label : function() {
 			return (this.name ? this.name: "Default");
 		},
